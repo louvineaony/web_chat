@@ -1,6 +1,6 @@
 {
-  "name": "vue-project",
-  "version": "0.0.0",
+  "name": "web_chat",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
