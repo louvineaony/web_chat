@@ -23,11 +23,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import OpenAI from "openai";
 import MarkdownRenderer from './components/MarkdownRenderer.vue'
-
-// 环境变量
-const API_KEY = import.meta.env.VITE_API_KEY;
 
 // 响应式数据
 const inputText = ref('');
@@ -36,16 +32,10 @@ const messages = ref([]);
 const msgBox = ref([
     { role: "system", content: "You are a helpful assistant." }
 ]);
+const api = import.meta.env.VITE_API_URL;
 
 // 计算属性
 const inputValid = computed(() => inputText.value.trim().length > 0);
-
-// API 客户端
-const openai = new OpenAI({
-    baseURL: import.meta.env.VITE_API_BASE,
-    apiKey: API_KEY,
-    dangerouslyAllowBrowser: true
-});
 
 async function handleSend() {
     if (!inputValid.value || isSending.value) return;
@@ -60,11 +50,12 @@ async function handleSend() {
         inputText.value = '';
 
         // API 调用
-        const completion = await openai.chat.completions.create({
-            messages: msgBox.value,
-            model: "deepseek-chat",
-            stream: false,
+        const response = await fetch(`${api}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(msgBox.value)
         });
+        const completion = await response.json();
 
         // 处理响应
         const assistantMessage = completion.choices[0].message.content;

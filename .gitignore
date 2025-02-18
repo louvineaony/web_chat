@@ -32,5 +32,5 @@ coverage
 .env
 .env.local
 .env.*.local
-
-/src/App_old.vue
+.env.production
+build
