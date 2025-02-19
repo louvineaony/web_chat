@@ -10,6 +10,10 @@
     </div>
 
     <div class="input-section">
+        <select v-model="model" :disabled="isSending" @change="clear">
+            <option value="chat">DeepSeek-V3</option>
+            <option value="reasoner">DeepSeek-R1</option>
+        </select>
         <input type="text" v-model.trim="inputText" placeholder="请输入内容" :disabled="isSending"
             @keyup.enter="handleSend" />
         <div class="action-buttons">
@@ -32,6 +36,7 @@ const messages = ref([]);
 const msgBox = ref([
     { role: "system", content: "You are a helpful assistant." }
 ]);
+const model = ref('chat');
 const api = import.meta.env.VITE_API_URL;
 
 // 计算属性
@@ -39,7 +44,6 @@ const inputValid = computed(() => inputText.value.trim().length > 0);
 
 async function handleSend() {
     if (!inputValid.value || isSending.value) return;
-
     try {
         isSending.value = true;
         const userMessage = inputText.value.trim();
@@ -50,15 +54,29 @@ async function handleSend() {
         inputText.value = '';
 
         // API 调用
-        const response = await fetch(`${api}/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(msgBox.value)
-        });
+        let response = null;
+        if (model.value == 'reasoner') {
+            response = await fetch(`${api}/reasoner`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(msgBox.value)
+            });
+        } else {
+            response = await fetch(`${api}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(msgBox.value)
+            });
+        }
         const completion = await response.json();
+        console.log(completion);
 
         // 处理响应
         const assistantMessage = completion.choices[0].message.content;
+        const reasoning_content = completion.choices[0].message.reasoning_content;
+        if (reasoning_content != null) {
+            messages.value.push({ content: `<think>${reasoning_content}</think>`, role: "assistant" });
+        }
         messages.value.push({ content: assistantMessage, role: "assistant" });
         msgBox.value.push({ role: "assistant", content: assistantMessage });
 
@@ -71,14 +89,17 @@ async function handleSend() {
     } finally {
         isSending.value = false;
     }
-}
+};
 
+function clear() {
+    messages.value = [];
+    msgBox.value.splice(1); // 保留 system message
+}
 function handleClear() {
     if (confirm('确定要清空对话历史吗？')) {
-        messages.value = [];
-        msgBox.value.splice(1); // 保留 system message
+        clear();
     }
-}
+};
 </script>
 
 <style scoped>
@@ -104,6 +125,11 @@ input {
     border-radius: 8px;
     font-size: 16px;
     max-height: 50px;
+}
+
+select {
+    border-radius: 8px;
+    font-size: 16px;
 }
 
 button {

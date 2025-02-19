@@ -43,6 +43,23 @@ app.post('/chat', async (req, res) => {
     });
   }
 });
+app.post('/reasoner', async (req, res) => {
+  try {
+    const completion = await openai.chat.completions.create({
+      messages: req.body,
+      model: "deepseek-reasoner",
+      stream: false,
+    });
+    res.json(completion);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({
+      error: {
+        message: error.message || 'OpenAI API 请求失败'
+      }
+    });
+  }
+});
 
 // 启动服务
 const PORT = process.env.PORT || 3001;
