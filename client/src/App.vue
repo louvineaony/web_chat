@@ -13,6 +13,8 @@
         <select v-model="model" :disabled="isSending" @change="clear">
             <option value="chat">DeepSeek-V3</option>
             <option value="reasoner">DeepSeek-R1</option>
+            <option value="ark">R1火山引擎版</option>
+            <option value="ark_net">R1火山引擎联网搜索版</option>
         </select>
         <input type="text" v-model.trim="inputText" placeholder="请输入内容" :disabled="isSending"
             @keyup.enter="handleSend" />
@@ -54,20 +56,12 @@ async function handleSend() {
         inputText.value = '';
 
         // API 调用
-        let response = null;
-        if (model.value == 'reasoner') {
-            response = await fetch(`${api}/reasoner`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(msgBox.value)
-            });
-        } else {
-            response = await fetch(`${api}/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(msgBox.value)
-            });
-        }
+        const response = await fetch(`${api}/${model.value}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(msgBox.value)
+        });
+
         const completion = await response.json();
         console.log(completion);
 
@@ -94,7 +88,7 @@ async function handleSend() {
 function clear() {
     messages.value = [];
     msgBox.value.splice(1); // 保留 system message
-}
+};
 function handleClear() {
     if (confirm('确定要清空对话历史吗？')) {
         clear();

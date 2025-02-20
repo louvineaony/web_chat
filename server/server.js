@@ -13,11 +13,23 @@ app.use(cors({
 
 app.use(express.json());
 
-// 代理路由
+// deepseek代理路由
 const openai = new OpenAI({
   baseURL: process.env.API_BASE,
   apiKey: process.env.API_KEY,
   dangerouslyAllowBrowser: true
+});
+
+// ark代理路由
+const openai_ark = new OpenAI({
+  baseURL: process.env.ARK_API_BASE,
+  apiKey: process.env.ARK_API_KEY
+});
+
+// ark_net代理路由
+const openai_ark_net = new OpenAI({
+  baseURL: process.env.ARK_NET_API_BASE,
+  apiKey: process.env.ARK_API_KEY
 });
 
 // 健康检查端点
@@ -25,7 +37,7 @@ app.get('/', (req, res) => {
   res.status(200).send('Server is running');
 });
 
-// OpenAI 代理端点
+// deepseek代理端点
 app.post('/chat', async (req, res) => {
   try {
     const completion = await openai.chat.completions.create({
@@ -49,6 +61,40 @@ app.post('/reasoner', async (req, res) => {
       messages: req.body,
       model: "deepseek-reasoner",
       stream: false,
+    });
+    res.json(completion);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({
+      error: {
+        message: error.message || 'OpenAI API 请求失败'
+      }
+    });
+  }
+});
+
+// ark代理端点
+app.post('/ark', async (req, res) => {
+  try {
+    const completion = await openai_ark.chat.completions.create({
+      messages: req.body,
+      model: process.env.ARK_MODEL
+    });
+    res.json(completion);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({
+      error: {
+        message: error.message || 'OpenAI API 请求失败'
+      }
+    });
+  }
+});
+app.post('/ark_net', async (req, res) => {
+  try {
+    const completion = await openai_ark_net.chat.completions.create({
+      messages: req.body,
+      model: process.env.ARK_NET_MODEL
     });
     res.json(completion);
   } catch (error) {
