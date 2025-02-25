@@ -13,24 +13,22 @@ app.use(cors({
 
 app.use(express.json());
 
-// deepseek代理路由
-const openai = new OpenAI({
-  baseURL: process.env.API_BASE,
-  apiKey: process.env.API_KEY,
-  dangerouslyAllowBrowser: true
-});
+// 路由方法
+function ai(baseURL, apiKey) {
+  return new OpenAI({
+    baseURL: baseURL,
+    apiKey: apiKey
+  })
+};
 
-// ark代理路由
-const openai_ark = new OpenAI({
-  baseURL: process.env.ARK_API_BASE,
-  apiKey: process.env.ARK_API_KEY
-});
+// deepseek官方代理路由
+const openai = ai(process.env.API_BASE, process.env.API_KEY);
 
-// ark_net代理路由
-const openai_ark_net = new OpenAI({
-  baseURL: process.env.ARK_NET_API_BASE,
-  apiKey: process.env.ARK_API_KEY
-});
+// 火山引擎代理路由
+const openai_ark = ai(process.env.ARK_API_BASE, process.env.ARK_API_KEY);
+
+// 火山引擎联网搜索应用代理路由
+const openai_ark_net = ai(process.env.ARK_NET_API_BASE, process.env.ARK_API_KEY);
 
 // 健康检查端点
 app.get('/', (req, res) => {

@@ -10,9 +10,9 @@
     </div>
 
     <div class="input-section">
-        <select v-model="model" :disabled="isSending" @change="clear">
-            <option value="chat">DeepSeek-V3</option>
-            <option value="reasoner">DeepSeek-R1</option>
+        <select v-model="model" :disabled="isTalking">
+            <option value="chat">DeepSeek-V3官方版</option>
+            <option value="reasoner">DeepSeek-R1官方版</option>
             <option value="ark">R1火山引擎版</option>
             <option value="ark_net">R1火山引擎联网搜索版</option>
         </select>
@@ -34,6 +34,7 @@ import MarkdownRenderer from './components/MarkdownRenderer.vue'
 // 响应式数据
 const inputText = ref('');
 const isSending = ref(false);
+const isTalking = ref(false);
 const messages = ref([]);
 const msgBox = ref([
     { role: "system", content: "You are a helpful assistant." }
@@ -45,6 +46,7 @@ const api = import.meta.env.VITE_API_URL;
 const inputValid = computed(() => inputText.value.trim().length > 0);
 
 async function handleSend() {
+    isTalking.value = true;
     if (!inputValid.value || isSending.value) return;
     try {
         isSending.value = true;
@@ -85,13 +87,11 @@ async function handleSend() {
     }
 };
 
-function clear() {
-    messages.value = [];
-    msgBox.value.splice(1); // 保留 system message
-};
 function handleClear() {
     if (confirm('确定要清空对话历史吗？')) {
-        clear();
+        messages.value = [];
+        msgBox.value.splice(1); // 保留 system message
+        isTalking.value = false;
     }
 };
 </script>
