@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import MarkdownRenderer from './components/MarkdownRenderer.vue'
 
 // 响应式数据
@@ -41,9 +41,22 @@ const msgBox = ref([
 ]);
 const model = ref('chat');
 const api = import.meta.env.VITE_API_URL;
+const STORAGE_KEY = 'chat_history';
 
 // 计算属性
 const inputValid = computed(() => inputText.value.trim().length > 0);
+
+// 加载历史记录
+onMounted(() => {
+    const savedHistory = localStorage.getItem(STORAGE_KEY);
+    if (savedHistory) {
+        const history = JSON.parse(savedHistory);
+        msgBox.value = history.msgBox;
+        messages.value = history.messages;
+        model.value = history.model;
+        isTalking.value = true;
+    }
+});
 
 async function handleSend() {
     isTalking.value = true;
@@ -84,16 +97,28 @@ async function handleSend() {
         });
     } finally {
         isSending.value = false;
+        saveHistory();
     }
-};
+}
 
 function handleClear() {
     if (confirm('确定要清空对话历史吗？')) {
         messages.value = [];
         msgBox.value.splice(1); // 保留 system message
         isTalking.value = false;
+        localStorage.clear();
     }
-};
+}
+
+// 保存历史记录的方法
+function saveHistory() {
+    const history = {
+        msgBox: msgBox.value,
+        messages: messages.value,
+        model: model.value
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+}
 </script>
 
 <style scoped>
