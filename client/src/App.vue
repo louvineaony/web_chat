@@ -1,4 +1,12 @@
 <template>
+    <div class="history-panel">
+        <h3>对话历史</h3>
+        <button class="newChat" @click="newChat">开启新对话</button>
+        <div v-for="(session, index) in historySessions" :key="index" class="session-item">
+            <div class="session" @click="loadSession(index)">{{ session.time }}</div>
+            <div class="delete" @click="deleteSession(index)">X</div>
+        </div>
+    </div>
     <div class="container">
         <div class='output-section'>
             <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.role]">
@@ -7,28 +15,28 @@
                 <img v-show="msg.role === 'assistant'" src="/ds.svg" alt="Assistant icon" class="avatar">
             </div>
         </div>
-    </div>
-
-    <div class="input-section">
-        <select v-model="model" :disabled="isTalking">
-            <option value="chat">DeepSeek-V3官方版</option>
-            <option value="reasoner">DeepSeek-R1官方版</option>
-            <option value="ark">R1火山引擎版</option>
-            <option value="ark_net">R1火山引擎联网搜索版</option>
-        </select>
-        <input type="text" v-model.trim="inputText" placeholder="请输入内容" :disabled="isSending"
-            @keyup.enter="handleSend" />
-        <div class="action-buttons">
-            <button @click="handleSend" :disabled="isSending || !inputValid">
-                {{ isSending ? '发送中...' : '发送' }}
-            </button>
-            <button @click="handleClear" class="secondary" :disabled="isSending">清空上下文</button>
+        <div class="input-section">
+            <select v-model="model" :disabled="isTalking">
+                <option value="chat">DeepSeek-V3官方版</option>
+                <option value="reasoner">DeepSeek-R1官方版</option>
+                <option value="ark">R1火山引擎版</option>
+                <option value="ark_net">R1火山引擎联网搜索版</option>
+            </select>
+            <input type="text" v-model.trim="inputText" placeholder="请输入内容" :disabled="isSending"
+                @keyup.enter="handleSend" />
+            <div class="action-buttons">
+                <button @click="handleSend" :disabled="isSending || !inputValid">
+                    {{ isSending ? '发送中...' : '发送' }}
+                </button>
+            </div>
         </div>
     </div>
+
+
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import MarkdownRenderer from './components/MarkdownRenderer.vue'
 
 // 响应式数据
@@ -41,25 +49,12 @@ const msgBox = ref([
 ]);
 const model = ref('chat');
 const api = import.meta.env.VITE_API_URL;
-const STORAGE_KEY = 'chat_history';
+const historySessions = ref(JSON.parse(localStorage.getItem('chat_sessions')) || []);
 
 // 计算属性
 const inputValid = computed(() => inputText.value.trim().length > 0);
 
-// 加载历史记录
-onMounted(() => {
-    const savedHistory = localStorage.getItem(STORAGE_KEY);
-    if (savedHistory) {
-        const history = JSON.parse(savedHistory);
-        msgBox.value = history.msgBox;
-        messages.value = history.messages;
-        model.value = history.model;
-        isTalking.value = true;
-    }
-});
-
 async function handleSend() {
-    isTalking.value = true;
     if (!inputValid.value || isSending.value) return;
     try {
         isSending.value = true;
@@ -78,7 +73,6 @@ async function handleSend() {
         });
 
         const completion = await response.json();
-        console.log(completion);
 
         // 处理响应
         const assistantMessage = completion.choices[0].message.content;
@@ -97,27 +91,49 @@ async function handleSend() {
         });
     } finally {
         isSending.value = false;
+        isTalking.value = true;
         saveHistory();
-    }
-}
-
-function handleClear() {
-    if (confirm('确定要清空对话历史吗？')) {
-        messages.value = [];
-        msgBox.value.splice(1); // 保留 system message
-        isTalking.value = false;
-        localStorage.clear();
     }
 }
 
 // 保存历史记录的方法
 function saveHistory() {
-    const history = {
+    const currentSession = {
+        time: new Date().toLocaleString(),
         msgBox: msgBox.value,
         messages: messages.value,
-        model: model.value
+        model: model.value,
+        isTalking: isTalking.value
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    historySessions.value = [currentSession, ...historySessions.value];
+    localStorage.setItem('chat_sessions', JSON.stringify(historySessions.value));
+}
+
+// 加载历史对话
+function loadSession(index) {
+    const session = historySessions.value[index];
+    msgBox.value = session.msgBox;
+    messages.value = session.messages;
+    model.value = session.model;
+    isTalking.value = session.isTalking;
+}
+
+// 删除历史对话
+function deleteSession(index) {
+    if (confirm('确定要删除该对话历史吗？')) {
+        historySessions.value.splice(index, 1);
+        localStorage.setItem('chat_sessions', JSON.stringify(historySessions.value));
+        messages.value = [];
+        msgBox.value.splice(1); // 保留 system message
+        isTalking.value = false;
+    }
+}
+
+// 开启新对话
+function newChat() {
+    messages.value = [];
+    msgBox.value.splice(1); // 保留 system message
+    isTalking.value = false;
 }
 </script>
 
@@ -126,6 +142,45 @@ function saveHistory() {
     max-width: 1200px;
     margin: 20px auto;
     padding: 0 15px;
+}
+
+.history-panel {
+    width: 200px;
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+    margin-right: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.session-item {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #f8f9fa;
+    transition: background 0.2s;
+    display: flex;
+}
+
+.session-item:hover {
+    background: #e9ecef;
+}
+
+.session {
+    padding: 3px 5px;
+}
+
+.delete {
+    padding: 3px 5px;
+}
+
+.delete:hover {
+    color: red;
+}
+
+.newChat {
+    margin: 10px 0px;
 }
 
 .input-section {
@@ -169,11 +224,6 @@ button[disabled] {
 
 button.primary {
     background-color: #007bff;
-    color: white;
-}
-
-button.secondary {
-    background-color: #6c757d;
     color: white;
 }
 
